@@ -1,0 +1,2 @@
+# news
+Mongodb sharded replicaset 
