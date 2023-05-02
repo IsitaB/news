@@ -18,6 +18,7 @@ db = client['nytdb']
 articles_collection = db['articles']
 print(db.list_collection_names())
 
+'''Load clickbait model'''
 tfidf_reloaded = pickle.load(open('tfidf.pkl', "rb"))
 model_reloaded = pickle.load(open('clickbaitmodel.pkl', "rb"))
 
@@ -59,11 +60,11 @@ def getMainMenuAndInput():
 
 def case1():
   topic = input('Please enter the topic of interest: ')
-  year = input('Which year: ')
-  month = input('Lastly, in which month? ')
+  year = int(input('Which year: '))
+  month = int(input('Lastly, in which month? '))
 
-  res = articles_collection.find({"$and": [{'News Desk': {"$in": [topic]}}, {'Year':year, 'Month': month}]})
-  for article in res:
+  articles = articles_collection.find({'News Desk': topic, 'Year': year, 'Month': month})
+  for article in articles:
     print(article)
 
 def case4():
