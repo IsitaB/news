@@ -58,6 +58,12 @@ def getMainMenuAndInput():
 
   return input('\n\n\nEnter the number of a menu option or Q to exit \n')
 
+def printHelper(article):
+  print('Headline:', article['Headline'])
+  print('  ', article['Byline'],'|', article['Pub Date'][:10], '\n  ', article['Snippet'])
+  print('Access here', article['Web URL'])
+  print('\n\n')
+
 def case1():
   topic = input('Please enter the topic of interest: ')
   year = int(input('Which year: '))
@@ -65,25 +71,26 @@ def case1():
 
   articles = articles_collection.find({'News Desk': topic, 'Year': year, 'Month': month})
   for article in articles:
-    print(article)
+    printHelper(article)
 
 def case4():
   wordLimit = int(input("I get that reading takes a while. We'll suggest 10 articles within your word limit. What's your word limit for articles? "))
   articles = articles_collection.find({'Word Count': {"$lte": wordLimit}}).limit(10)
   for article in articles:
-    print(article)
+    printHelper(article)
 
 def case5():
   keyword = input("Give us a keyword you want to read about: ")
   articles = articles_collection.find({"$and": [{'Keywords': {"$regex": keyword}}, {'Year': {'$gte': 2022}}]}).limit(10)
   for article in articles:
-    print(article)
+    printHelper(article)
+    print('Word Count:', article['Word Count'])
 
 def case6():
   articles = articles_collection.find({'News Desk': 'Investigative'}, {'_id':0, 'Headline':1, 'Year': 1}).sort('Year',-1).limit(1000)
   # clean this up by year
   for article in articles:
-    print(article)
+    printHelper(article)
 
 def case16():
   tfidf_reloaded = pickle.load(open('tfidf.pkl', "rb"))
@@ -97,7 +104,6 @@ def case16():
 
   res_df['Clickbait'] = result.tolist()
   print(res_df.to_markdown())
-  # throw in clickbait detection model
 
 def case17():
   topics = articles_collection.distinct('News Desk')
