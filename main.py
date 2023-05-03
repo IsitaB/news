@@ -27,7 +27,6 @@ def getMainMenuAndInput():
 
   print("\n\nNews Search\n \
     \n\t 1 Get articles by news sector, year, and month \
-    \n\t 2 Get articles by topic and political ideology leaning \
     \n\t 3 Get articles by author and political ideology leaning \
     \n\t 4 Get articles by wordcount \
     \n\t 5 Get articles by key terms \
@@ -112,7 +111,7 @@ def case17():
 
 def main():
   user_input = ''
-  while user_input != 'Q':
+  while user_input != '00':
     user_input = getMainMenuAndInput()
     user_input = int(user_input)
     # throw in some input validation here
