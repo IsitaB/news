@@ -26,7 +26,7 @@ def getMainMenuAndInput():
   print('Welcome to the NYT Analysis Dashboard \n')
 
   print("\n\nNews Search\n \
-    \n\t 1 Get articles by topic, year, and month \
+    \n\t 1 Get articles by news sector, year, and month \
     \n\t 2 Get articles by topic and political ideology leaning \
     \n\t 3 Get articles by author and political ideology leaning \
     \n\t 4 Get articles by wordcount \
@@ -48,7 +48,7 @@ def getMainMenuAndInput():
     \n\t 16 Headline clickbait score")
 
   print("\n\nMight help you with your search\n \
-    \n\t 17 Get all topics \
+    \n\t 17 Get all news sectors \
     \n\t 18 Get the org and authors breakdown")
   
   print("\n\nAdmin\n \
@@ -106,8 +106,9 @@ def case16():
   print(res_df.to_markdown())
 
 def case17():
-  topics = articles_collection.distinct('News Desk')
-  print(topics)
+  topics = pd.DataFrame(list(articles_collection.aggregate([{'$group': {'_id': '$News Desk', 'count': {'$sum':1}}}])))
+  topics = topics.rename(columns={'_id':'News Desk'})
+  print(topics.to_markdown())
 
 def main():
   user_input = ''
