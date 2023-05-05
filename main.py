@@ -1,11 +1,20 @@
 from pymongo import MongoClient
 import pandas as pd
 import numpy as np
+import datetime
+from bson import ObjectId
+from pymongo.collection import ReturnDocument
+from datetime import timedelta
+from bson import SON
+from datetime import datetime, timezone
+import pytz
+import pymongo
 
 from dotenv import load_dotenv
 import os
-import pickle5 as pickle
+import pickle
 
+print("hello")
 load_dotenv()
 MONGO_URI = os.environ['MONGO_URI']
 
@@ -19,8 +28,9 @@ articles_collection = db['articles']
 print(db.list_collection_names())
 
 '''Load clickbait model'''
-tfidf_reloaded = pickle.load(open('tfidf.pkl', "rb"))
-model_reloaded = pickle.load(open('clickbaitmodel.pkl', "rb"))
+#tfidf_reloaded = pickle.load(open('tfidf.pkl', "rb"))
+#model_reloaded = pickle.load(open('clickbaitmodel.pkl', "rb"))
+
 
 def getMainMenuAndInput():
   print('Welcome to the NYT Analysis Dashboard \n')
@@ -32,7 +42,7 @@ def getMainMenuAndInput():
     \n\t 5 Get articles by key terms \
     \n\t 6 Get article Investigative headlines by year \
     \n\t 7 Get articles by organization and get polical ideology leaning \
-    \n\t 8 Get this week's top articles \
+    \n\t 8 Get the top articles of January 2022 \
     \n\t 9 Get top articles by topic")
 
   print("\n\nTrend analysis\n \
@@ -51,9 +61,10 @@ def getMainMenuAndInput():
     \n\t 18 Get the org and authors breakdown")
   
   print("\n\nAdmin\n \
-    \n\t 19 Delete article \
+    \n\t 19 Insert dummy article \
     \n\t 20 Update article \
-    \n\t 21 Insert dummy article")
+    \n\t 21 Delete article"    
+        )
 
   return input('\n\n\nEnter the number of a menu option or Q to exit \n')
 
@@ -91,6 +102,33 @@ def case6():
   for article in articles:
     printHelper(article)
 
+
+def case8():
+    top_articles = articles_collection.find({
+    "Pub Date": {"$regex": "^2022-01-"}
+    }).sort([("Word Count", pymongo.DESCENDING)]).limit(10)
+
+    # Check if there are no articles for January 2022
+    if not top_articles:
+        print("No articles found for January 2022.")
+        return
+
+    # Print the headlines of the top articles
+    print("---Headlines of top 10 articles of January 2022:---")
+    for article in top_articles:
+        print(article['Headline'])
+
+def case9():
+    topic = input("Enter a topic: ")
+    articles = db.articles.find({"Keywords": {"$regex": f".*{topic}.*"}}).sort([('Word Count', pymongo.DESCENDING)]).limit(10)
+    count = db.articles.count_documents({"Keywords": {"$regex": f".*{topic}.*"}})
+    if count == 0:
+        print("No articles found.")
+        return
+    print(f"Top {min(10, count)} articles on '{topic}':\n")
+    for i, article in enumerate(articles):
+        print(f"{i+1}. {article['Headline']}")       
+
 def case16():
   tfidf_reloaded = pickle.load(open('tfidf.pkl', "rb"))
   model_reloaded = pickle.load(open('clickbaitmodel.pkl', "rb"))
@@ -109,6 +147,41 @@ def case17():
   topics = topics.rename(columns={'_id':'News Desk'})
   print(topics.to_markdown())
 
+def case19():
+    # Insert dummy article
+    dummy_article = {
+        "Headline": "Dummy Article",
+        "Byline": "John Doe",
+        "Snippet": "This is a dummy article for testing purposes.",
+        "Keywords": ["dummy", "testing"],
+        "Web URL": "https://example.com"
+    }
+    result = db.articles.insert_one(dummy_article)
+    print("Dummy article inserted with ID:", result.inserted_id)
+
+def case20():
+    # Update article by ID
+    article_id = input("Enter the ID of the article you want to update: ")
+    result = db.articles.update_one(
+        {"_id": ObjectId(article_id)},
+        {"$set": {"Headline": "Updated Headline", "Byline": "Updated Byline"}}
+    )
+    if result.modified_count > 0:
+        print("Article updated successfully.")
+    else:
+        print("Article not found.")
+
+def case21():
+    # Delete article by ID
+    article_id = input("Enter the ID of the article you want to delete: ")
+    result = db.articles.delete_one({"_id": ObjectId(article_id)})
+    if result.deleted_count == 1:
+        print("Article deleted successfully.")
+    else:
+        print("Article not found.")
+
+
+
 def main():
   user_input = ''
   while user_input != '00':
@@ -126,10 +199,20 @@ def main():
       case5()
     elif user_input == 6:
       case6()
+    elif user_input == 8:
+      case8()  
+    elif user_input == 9:
+      case9()  
     elif user_input == 16:
       case16()
     elif user_input == 17:
       case17()
+    elif user_input == 19:
+      case19()
+    elif user_input == 20:
+      case20()
+    elif user_input == 21:
+      case21()  
 
     break # for testing
 
