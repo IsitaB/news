@@ -17,17 +17,17 @@ client = MongoClient(MONGO_URI)
 db = client['nytdb']
 articles_collection = db['articles']
 print(db.list_collection_names())
-
+print("here")
 '''Load clickbait model'''
 tfidf_reloaded = pickle.load(open('tfidf.pkl', "rb"))
 model_reloaded = pickle.load(open('clickbaitmodel.pkl', "rb"))
-
+print("after")
 def getMainMenuAndInput():
   print('Welcome to the NYT Analysis Dashboard \n')
 
   print("\n\nNews Search\n \
     \n\t 1 Get articles by news sector, year, and month \
-    \n\t 3 Get articles by author and political ideology leaning \
+    \n\t 3 Get articles by author \
     \n\t 4 Get articles by wordcount \
     \n\t 5 Get articles by key terms \
     \n\t 6 Get article Investigative headlines by year \
@@ -37,7 +37,7 @@ def getMainMenuAndInput():
 
   print("\n\nTrend analysis\n \
     \n\t 10 See breakdown of news coverage by topics over time \
-    \n\t 11 Get the coverage breakdown by topics this week")
+    \n\t 11 Get the word count for every year and month")
 
   print("\n\nMore analysis\n \
     \n\t 12 Contributions by organization analysis \
@@ -72,6 +72,25 @@ def case1():
   for article in articles:
     printHelper(article)
 
+def case3():
+  author = input('Please enter the name of author of interest: ')
+  # check if author contains middlename, or just first and last
+  if author == '':
+    print("No author provided") 
+    return
+  elif len(author.split()) == 2:
+    # insert a None in between the first and last name
+    author = author.split()
+    author.insert(1, None)
+    author = ' '.join(author)
+
+  regex = "/"+author+"/i"
+  articles = articles_collection.find({ 'Authors': { "$elemMatch": { "$regex": regex } } })
+
+  for article in articles:
+    printHelper(article)
+
+
 def case4():
   wordLimit = int(input("I get that reading takes a while. We'll suggest 10 articles within your word limit. What's your word limit for articles? "))
   articles = articles_collection.find({'Word Count': {"$lte": wordLimit}}).limit(10)
@@ -88,6 +107,27 @@ def case5():
 def case6():
   articles = articles_collection.find({'News Desk': 'Investigative'}, {'_id':0, 'Headline':1, 'Year': 1}).sort('Year',-1).limit(1000)
   # clean this up by year
+  for article in articles:
+    printHelper(article)
+
+def case10():
+  # articles_collection.aggregate([{"$group": {'_id': {'year': "$Year", 'month': "$Month", 'topic': "$Keywords"}, 'count': {"$sum": 1}}}, {"$project": {'_id': 0, 'year': "$_id.year", 'month': "$_id.month", 'topic': "$_id.topic", 'count': 1}}, {"$sort": {'year': 1, 'month': 1, 'count': -1}}])
+  articles = articles_collection.aggregate([{"$group": {"_id": {"year": "$Year", "month": "$Month", "topic": "$Keywords"}, "count": {"$sum": 1}}}, {"$project": {"_id": 0, "year": "$_id.year", "month": "$_id.month", "topic": "$_id.topic", "count": 1}}, {"$sort": {"year": 1, "month": 1, "count": -1}}])
+  for article in articles:
+    printHelper(article)
+
+def case11():
+  articles = articles_collection.map_reduce(
+    "function() { emit({ year: this.Year, month: this.Month }, this['Word Count']); }",
+    "function(key, values) { return Array.sum(values); }",
+    "word_count_by_month_year"
+  ).find()
+
+  for article in articles:
+    printHelper(article)
+
+def case12():
+  articles = articles_collection.aggregate([{ "$group": { "_id": "$News Desk", "count": { "$sum": 1 } } }, { "$sort": { "count": -1 } }])
   for article in articles:
     printHelper(article)
 
@@ -120,12 +160,20 @@ def main():
       break
     elif user_input == 1:
       case1()
+    elif user_input == 3:
+      case3()
     elif user_input == 4:
       case4()
     elif user_input == 5:
       case5()
     elif user_input == 6:
       case6()
+    elif user_input == 10:
+      case10()
+    elif user_input == 11:
+      case11()
+    elif user_input == 12:
+      case12()
     elif user_input == 16:
       case16()
     elif user_input == 17:
