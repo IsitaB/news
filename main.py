@@ -9,10 +9,11 @@ from bson import SON
 from datetime import datetime, timezone
 import pytz
 import pymongo
+import re
 
 from dotenv import load_dotenv
 import os
-import pickle
+# import pickle
 
 print("hello")
 load_dotenv()
@@ -26,28 +27,18 @@ client = MongoClient(MONGO_URI)
 db = client['nytdb']
 articles_collection = db['articles']
 print(db.list_collection_names())
-print("here")
 '''Load clickbait model'''
-<<<<<<< HEAD
-tfidf_reloaded = pickle.load(open('tfidf.pkl', "rb"))
-model_reloaded = pickle.load(open('clickbaitmodel.pkl', "rb"))
-print("after")
-=======
-#tfidf_reloaded = pickle.load(open('tfidf.pkl', "rb"))
-#model_reloaded = pickle.load(open('clickbaitmodel.pkl', "rb"))
-
-
->>>>>>> 0b47d8e222a36ad0065369ba25869eae327e8e6e
+# tfidf_reloaded = pickle.load(open('tfidf.pkl', "rb"))
+# model_reloaded = pickle.load(open('clickbaitmodel.pkl', "rb"))
 def getMainMenuAndInput():
   print('Welcome to the NYT Analysis Dashboard \n')
 
-  print("\n\nNews Search\n \
+  print("\nNews Search\n \
     \n\t 1 Get articles by news sector, year, and month \
     \n\t 3 Get articles by author \
     \n\t 4 Get articles by wordcount \
     \n\t 5 Get articles by key terms \
     \n\t 6 Get article Investigative headlines by year \
-    \n\t 7 Get articles by organization and get polical ideology leaning \
     \n\t 8 Get the top articles of January 2022 \
     \n\t 9 Get top articles by topic")
 
@@ -57,9 +48,6 @@ def getMainMenuAndInput():
 
   print("\n\nMore analysis\n \
     \n\t 12 Contributions by organization analysis \
-    \n\t 13 Contributions by author over time analysis \
-    \n\t 14 Author's coverage analysis \
-    \n\t 15 Analysis of topics covered by high ranking vs low ranking authors \
     \n\t 16 Headline clickbait score")
 
   print("\n\nMight help you with your search\n \
@@ -96,14 +84,12 @@ def case3():
     print("No author provided") 
     return
   elif len(author.split()) == 2:
-    # insert a None in between the first and last name
     author = author.split()
-    author.insert(1, None)
+    author.insert(1, 'None')
     author = ' '.join(author)
 
-  regex = "/"+author+"/i"
+  regex = re.compile(author, re.IGNORECASE)
   articles = articles_collection.find({ 'Authors': { "$elemMatch": { "$regex": regex } } })
-
   for article in articles:
     printHelper(article)
 
@@ -127,28 +113,33 @@ def case6():
   for article in articles:
     printHelper(article)
 
-<<<<<<< HEAD
 def case10():
-  # articles_collection.aggregate([{"$group": {'_id': {'year': "$Year", 'month': "$Month", 'topic': "$Keywords"}, 'count': {"$sum": 1}}}, {"$project": {'_id': 0, 'year': "$_id.year", 'month': "$_id.month", 'topic': "$_id.topic", 'count': 1}}, {"$sort": {'year': 1, 'month': 1, 'count': -1}}])
-  articles = articles_collection.aggregate([{"$group": {"_id": {"year": "$Year", "month": "$Month", "topic": "$Keywords"}, "count": {"$sum": 1}}}, {"$project": {"_id": 0, "year": "$_id.year", "month": "$_id.month", "topic": "$_id.topic", "count": 1}}, {"$sort": {"year": 1, "month": 1, "count": -1}}])
+  articles = articles_collection.aggregate(
+     [{"$group": {"_id": {"year": "$Year", "month": "$Month", "topic": "$Keywords"}, 
+      "count": {"$sum": 1}}}, 
+      {"$project": {"_id": 0, "year": "$_id.year", "month": "$_id.month", "topic": "$_id.topic", "count": 1}}, 
+      {"$sort": {"year": 1, "month": 1, "count": -1}}])
   for article in articles:
-    printHelper(article)
+    print(article)
 
 def case11():
-  articles = articles_collection.map_reduce(
-    "function() { emit({ year: this.Year, month: this.Month }, this['Word Count']); }",
-    "function(key, values) { return Array.sum(values); }",
-    "word_count_by_month_year"
-  ).find()
+  result = db.command(
+      'mapReduce',
+      'articles',
+      map="function() { emit({ year: this.Year, month: this.Month }, this['Word Count']); }",
+      reduce="function(key, values) { return Array.sum(values); }",
+      out='word_count_by_month_year'
+  )
 
+  articles = db.word_count_by_month_year.find()
   for article in articles:
-    printHelper(article)
+    print(article)
 
 def case12():
-  articles = articles_collection.aggregate([{ "$group": { "_id": "$News Desk", "count": { "$sum": 1 } } }, { "$sort": { "count": -1 } }])
-  for article in articles:
-    printHelper(article)
-=======
+  results = articles_collection.aggregate([{ "$group": { "_id": "$News Desk", "count": { "$sum": 1 } } }, 
+                                           { "$sort": { "count": -1 } }])
+  for result in results:
+    print(result)
 
 def case8():
     top_articles = articles_collection.find({
@@ -175,20 +166,19 @@ def case9():
     print(f"Top {min(10, count)} articles on '{topic}':\n")
     for i, article in enumerate(articles):
         print(f"{i+1}. {article['Headline']}")       
->>>>>>> 0b47d8e222a36ad0065369ba25869eae327e8e6e
 
-def case16():
-  tfidf_reloaded = pickle.load(open('tfidf.pkl', "rb"))
-  model_reloaded = pickle.load(open('clickbaitmodel.pkl', "rb"))
+# def case16():
+#   tfidf_reloaded = pickle.load(open('tfidf.pkl', "rb"))
+#   model_reloaded = pickle.load(open('clickbaitmodel.pkl', "rb"))
 
-  res_df = pd.DataFrame(list(articles_collection.find({'Year': {'$gte': 2022}}, {'_id':0, 'Headline':1}).limit(10)))
-  tfidf_res_text = tfidf_reloaded.transform(res_df['Headline'])
-  preds = model_reloaded.predict(tfidf_res_text)
+#   res_df = pd.DataFrame(list(articles_collection.find({'Year': {'$gte': 2022}}, {'_id':0, 'Headline':1}).limit(10)))
+#   tfidf_res_text = tfidf_reloaded.transform(res_df['Headline'])
+#   preds = model_reloaded.predict(tfidf_res_text)
 
-  result = np.where(preds == 0, 'Not Clickbait', 'Clickbait')
+#   result = np.where(preds == 0, 'Not Clickbait', 'Clickbait')
 
-  res_df['Clickbait'] = result.tolist()
-  print(res_df.to_markdown())
+#   res_df['Clickbait'] = result.tolist()
+#   print(res_df.to_markdown())
 
 def case17():
   topics = pd.DataFrame(list(articles_collection.aggregate([{'$group': {'_id': '$News Desk', 'count': {'$sum':1}}}])))
@@ -249,19 +239,16 @@ def main():
       case5()
     elif user_input == 6:
       case6()
-<<<<<<< HEAD
     elif user_input == 10:
       case10()
     elif user_input == 11:
       case11()
     elif user_input == 12:
       case12()
-=======
     elif user_input == 8:
       case8()  
     elif user_input == 9:
       case9()  
->>>>>>> 0b47d8e222a36ad0065369ba25869eae327e8e6e
     elif user_input == 16:
       case16()
     elif user_input == 17:
