@@ -40,14 +40,14 @@ def getMainMenuAndInput():
     \n\t 5 Get articles by key terms \
     \n\t 6 Get article Investigative headlines by year \
     \n\t 8 Get the top articles of January 2022 \
-    \n\t 9 Get top articles by topic")
+    \n\t 9 Get top articles by topic \
+    \n\t 12 Get total word count by topic")
 
   print("\n\nTrend analysis\n \
     \n\t 10 See breakdown of news coverage by topics over time \
     \n\t 11 Get the word count for every year and month")
 
   print("\n\nMore analysis\n \
-    \n\t 12 Contributions by organization analysis \
     \n\t 16 Headline clickbait score")
 
   print("\n\nMight help you with your search\n \
@@ -136,8 +136,9 @@ def case11():
     print(article)
 
 def case12():
-  results = articles_collection.aggregate([{ "$group": { "_id": "$News Desk", "count": { "$sum": 1 } } }, 
-                                           { "$sort": { "count": -1 } }])
+  
+  results = articles_collection.aggregate([{'$group': {'_id': '$Keywords', 'word_count': {'$sum': '$Word Count'}}},    
+                                                      {'$sort': {'word_count': -1}}])
   for result in results:
     print(result)
 
